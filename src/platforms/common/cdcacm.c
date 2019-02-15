@@ -34,10 +34,12 @@
 #endif
 #include "usbuart.h"
 #include "serialno.h"
+#include "uf2.h"
 
 #include <libopencm3/cm3/nvic.h>
 #include <libopencm3/usb/usbd.h>
 #include <libopencm3/usb/cdc.h>
+#include <libopencm3/usb/msc.h>
 #include <libopencm3/cm3/scb.h>
 #include <libopencm3/usb/dfu.h>
 #include <stdlib.h>
@@ -324,7 +326,7 @@ static const struct usb_endpoint_descriptor trace_endp[] = {{
 const struct usb_interface_descriptor trace_iface = {
 	.bLength = USB_DT_INTERFACE_SIZE,
 	.bDescriptorType = USB_DT_INTERFACE,
-	.bInterfaceNumber = 5,
+	.bInterfaceNumber = 6,
 	.bAlternateSetting = 0,
 	.bNumEndpoints = 1,
 	.bInterfaceClass = 0xFF,
@@ -347,6 +349,37 @@ static const struct usb_iface_assoc_descriptor trace_assoc = {
 };
 #endif
 
+static const struct usb_endpoint_descriptor msc_endp[] = {{
+	.bLength = USB_DT_ENDPOINT_SIZE,
+	.bDescriptorType = USB_DT_ENDPOINT,
+	.bEndpointAddress = MSC_EP_OUT,
+	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
+	.wMaxPacketSize = 64,
+	.bInterval = 0,
+}, {
+	.bLength = USB_DT_ENDPOINT_SIZE,
+	.bDescriptorType = USB_DT_ENDPOINT,
+	.bEndpointAddress = MSC_EP_IN,
+	.bmAttributes = USB_ENDPOINT_ATTR_BULK,
+	.wMaxPacketSize = 64,
+	.bInterval = 0,
+}};
+
+static const struct usb_interface_descriptor msc_iface = {
+	.bLength = USB_DT_INTERFACE_SIZE,
+	.bDescriptorType = USB_DT_INTERFACE,
+	.bInterfaceNumber = INTF_MSC,
+	.bAlternateSetting = 0,
+	.bNumEndpoints = 2,
+	.bInterfaceClass = USB_CLASS_MSC,
+	.bInterfaceSubClass = USB_MSC_SUBCLASS_SCSI,
+	.bInterfaceProtocol = USB_MSC_PROTOCOL_BBB,
+	.iInterface = 0,
+	.endpoint = msc_endp,
+	.extra = NULL,
+	.extralen = 0
+};
+
 static const struct usb_interface ifaces[] = {{
 	.num_altsetting = 1,
 	.iface_assoc = &gdb_assoc,
@@ -365,6 +398,9 @@ static const struct usb_interface ifaces[] = {{
 	.num_altsetting = 1,
 	.iface_assoc = &dfu_assoc,
 	.altsetting = &dfu_iface,
+}, {
+	.num_altsetting = 1,
+	.altsetting = &msc_iface,
 #if defined(PLATFORM_HAS_TRACESWO)
 }, {
 	.num_altsetting = 1,
@@ -554,6 +590,9 @@ void cdcacm_init(void)
 			    usbd_control_buffer, sizeof(usbd_control_buffer));
 
 	usbd_register_set_config_callback(usbdev, cdcacm_set_config);
+
+	usb_msc_init(usbdev, MSC_EP_IN, 64, MSC_EP_OUT, 64, "Black Magic Probe", 
+				"UF2 Flasher", "42.00", UF2_NUM_BLOCKS, read_block, write_block);
 
 	nvic_set_priority(USB_IRQ, IRQ_PRI_USB);
 	nvic_enable_irq(USB_IRQ);
