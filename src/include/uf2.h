@@ -27,6 +27,8 @@ DEALINGS IN THE SOFTWARE.
 
 #include "uf2cfg.h"
 
+#include "dmesg.h"
+
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -79,6 +81,12 @@ typedef struct {
     uint32_t blocks_remaining;
     uint8_t *buffer;
 } UF2_HandoverArgs;
+
+static inline bool is_uf2_block(const void *data) {
+    const UF2_Block *bl = (const UF2_Block *)data;
+    return bl->magicStart0 == UF2_MAGIC_START0 && bl->magicStart1 == UF2_MAGIC_START1 &&
+           bl->magicEnd == UF2_MAGIC_END;
+}
 
 int write_block(uint32_t lba, const uint8_t *copy_from);
 int read_block(uint32_t block_no, uint8_t *data);

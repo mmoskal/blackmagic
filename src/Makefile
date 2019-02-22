@@ -60,6 +60,7 @@ SRC =			\
 	swdptap.c	\
 	swdptap_generic.c	\
 	target.c	\
+	ghostfat.c  \
 
 include $(PLATFORM_DIR)/Makefile.inc
 

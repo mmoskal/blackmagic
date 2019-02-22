@@ -22,7 +22,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
-#include "bl.h"
+#include "uf2.h"
 
 #include <string.h>
 #include <libopencm3/cm3/scb.h>
@@ -84,7 +84,7 @@ struct TextFile {
 #define STR(x) STR0(x)
 const char infoUf2File[] = //
     "UF2 Bootloader v" UF2_VERSION " W\r\n"
-    "Model: " USBMFGSTRING " / " USBDEVICESTRING "\r\n"
+    "Model: Blach Magic Probe\r\n"
     "Board-ID: " BOARD_ID "\r\n";
 
 const char indexFile[] = //
@@ -299,6 +299,8 @@ int read_block(uint32_t block_no, uint8_t *data) {
     return 0;
 }
 
+#define VALID_FLASH_ADDR(addr, pagesize) 1 // TODO
+
 static void write_block_core(uint32_t block_no, const uint8_t *data, bool quiet,
                              WriteState *state) {
     const UF2_Block *bl = (const void *)data;
@@ -307,9 +309,11 @@ static void write_block_core(uint32_t block_no, const uint8_t *data, bool quiet,
 
     // DBG("Write magic: %x", bl->magicStart0);
 
-    if (!is_uf2_block(bl) || !UF2_IS_MY_FAMILY(bl)) {
+    if (!is_uf2_block(bl))
         return;
-    }
+
+    //if (!UF2_IS_MY_FAMILY(bl))
+    //    return;
 
     if ((bl->flags & UF2_FLAG_NOFLASH) || bl->payloadSize > 256 || (bl->targetAddr & 0xff) ||
         !VALID_FLASH_ADDR(bl->targetAddr, bl->payloadSize)) {
