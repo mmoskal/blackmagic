@@ -54,6 +54,9 @@ void rcc_clock_setup(void)
 	/* Select HSI as SYSCLK source. */
 	rcc_set_sysclk_source(RCC_CFGR_SW_SYSCLKSEL_HSICLK);
 
+	// the PLL stays on from the bootloader
+	rcc_osc_off(RCC_PLL);
+
 	/* Enable external high-speed oscillator 16MHz. */
 	rcc_osc_on(RCC_HSE);
 	rcc_wait_for_osc_ready(RCC_HSE);
@@ -113,8 +116,6 @@ void platform_init(void)
 	void initialise_monitor_handles(void);
 	initialise_monitor_handles();
 #endif
-int i = 20000000;
-while(i--) asm("nop");
 	rcc_clock_setup();
 
 	/* Setup GPIO ports */
@@ -124,9 +125,6 @@ while(i--) asm("nop");
 	              GPIO_CNF_OUTPUT_PUSHPULL, TCK_PIN);
 	gpio_set_mode(TDI_PORT, GPIO_MODE_OUTPUT_50_MHZ,
 	              GPIO_CNF_OUTPUT_PUSHPULL, TDI_PIN);
-
-gpio_set_mode(GPIOA, GPIO_MODE_OUTPUT_50_MHZ,
-	              GPIO_CNF_OUTPUT_PUSHPULL, GPIO0);
 
 
 	platform_srst_set_val(false);
