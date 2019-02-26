@@ -53,6 +53,7 @@ static bool cmd_morse(void);
 static bool cmd_halt_timeout(target *t, int argc, const char **argv);
 static bool cmd_connect_srst(target *t, int argc, const char **argv);
 static bool cmd_hard_srst(void);
+static bool cmd_reset(target *t);
 #ifdef PLATFORM_HAS_POWER_SWITCH
 static bool cmd_target_power(target *t, int argc, const char **argv);
 #endif
@@ -73,6 +74,7 @@ const struct command_s cmd_list[] = {
 	{"halt_timeout", (cmd_handler)cmd_halt_timeout, "Timeout (ms) to wait until Cortex-M is halted: (Default 2000)" },
 	{"connect_srst", (cmd_handler)cmd_connect_srst, "Configure connect under SRST: (enable|disable)" },
 	{"hard_srst", (cmd_handler)cmd_hard_srst, "Force a pulse on the hard SRST line - disconnects target" },
+	{"reset", (cmd_handler)cmd_reset, "Reset target" },
 #ifdef PLATFORM_HAS_POWER_SWITCH
 	{"tpwr", (cmd_handler)cmd_target_power, "Supplies power to the target: (enable|disable)"},
 #endif
@@ -273,6 +275,12 @@ static bool cmd_hard_srst(void)
 	target_list_free();
 	platform_srst_set_val(true);
 	platform_srst_set_val(false);
+	return true;
+}
+
+static bool cmd_reset(target *t)
+{
+	target_reset(t);
 	return true;
 }
 
