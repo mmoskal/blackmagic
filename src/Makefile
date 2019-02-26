@@ -1,3 +1,5 @@
+-include Makefile.user
+
 PROBE_HOST ?= native
 PLATFORM_DIR = platforms/$(PROBE_HOST)
 VPATH += $(PLATFORM_DIR) platforms/common target
