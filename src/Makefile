@@ -114,6 +114,9 @@ command.c: include/version.h
 
 include/version.h: FORCE
 	$(Q)echo "  GIT     include/version.h"
-	$(Q)echo "#define FIRMWARE_VERSION \"`git describe --always --dirty`\"" > $@
+	$(Q)echo "#define FIRMWARE_VERSION \"`git describe --always --dirty`\"" > version.tmp
+	$(Q)diff -q version.tmp $@ || cp version.tmp $@
+	$(Q)rm -f version.tmp
+
 
 -include *.d
