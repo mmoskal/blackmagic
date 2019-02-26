@@ -72,7 +72,7 @@ void platform_init(void)
 	platform_srst_set_val(false);
 
 	gpio_set_mode(LED_PORT, GPIO_MODE_OUTPUT_2_MHZ,
-	              GPIO_CNF_OUTPUT_PUSHPULL, led_idle_run);
+	              GPIO_CNF_OUTPUT_PUSHPULL, LED_IDLE_RUN);
 
 	/* Relocate interrupt vector table here */
 	extern int vector_table;
