@@ -11,13 +11,15 @@ LDFLAGS_BOOT := $(LDFLAGS) --specs=nano.specs \
 	-Wl,-T,platforms/stm32/stlink.ld -nostartfiles -lc \
 	-Wl,-Map=mapfile -mthumb -mcpu=cortex-m3 -Wl,-gc-sections \
 	-L../libopencm3/lib
-LDFLAGS = $(LDFLAGS_BOOT) -Wl,-Ttext=0x8002000
 
 ifeq ($(ENABLE_DEBUG), 1)
-LDFLAGS += --specs=rdimon.specs
+SYSLDFLAGS = --specs=rdimon.specs
 else
-LDFLAGS += --specs=nosys.specs
+SYSLDFLAGS = --specs=nosys.specs
 endif
+
+LDFLAGS = $(LDFLAGS_BOOT) -Wl,-Ttext=0x8002000 $(SYSLDFLAGS)
+LDFLAGS_UF2 = $(LDFLAGS_BOOT) -Wl,-Ttext=0x8004000 $(SYSLDFLAGS)
 
 VPATH += platforms/stm32
 
@@ -29,16 +31,25 @@ SRC += 	cdcacm.c	\
 	traceswoasync.c	\
 	stlink_common.c \
 
-all:	blackmagic.bin blackmagic_dfu.bin blackmagic_dfu.hex dfu_upgrade.bin dfu_upgrade.hex
+all:	blackmagic.bin blackmagic_dfu.bin blackmagic_dfu.hex dfu_upgrade.bin dfu_upgrade.hex blackmagic.uf2
 
 blackmagic_dfu: usbdfu.o dfucore.o dfu_f1.o stlink_common.o
 	@echo "  LD      $@"
 	$(Q)$(CC) $^ -o $@ $(LDFLAGS_BOOT)
+
+
+blackmagic.uf2: blackmagic_uf2.bin
+	@echo "  UF2     $@"
+	python ../scripts/uf2conv.py --base 0x8004000 --output $@ --family 0x5ee21072 --convert $<
+
+blackmagic_uf2: include/version.h $(OBJ)
+	@echo "  LD      $@"
+	$(Q)$(CC) -o $@ $(OBJ) $(LDFLAGS_UF2)
 
 dfu_upgrade: dfu_upgrade.o dfucore.o dfu_f1.o  stlink_common.o
 	@echo "  LD      $@"
 	$(Q)$(CC) $^ -o $@ $(LDFLAGS)
 
 host_clean:
-	-$(Q)$(RM) blackmagic.bin blackmagic_dfu blackmagic_dfu.bin blackmagic_dfu.hex dfu_upgrade dfu_upgrade.bin dfu_upgrade.hex
+	-$(Q)$(RM) blackmagic.bin blackmagic_dfu blackmagic_dfu.bin blackmagic_dfu.hex dfu_upgrade dfu_upgrade.bin dfu_upgrade.hex blackmagic.uf2 blackmagic_uf2 blackmagic_uf2.bin
 
