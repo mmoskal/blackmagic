@@ -50,6 +50,7 @@ SRC =			\
 	morse.c		\
 	msp432.c	\
 	nrf51.c		\
+	nxpke04.c	\
 	platform.c	\
 	sam3x.c		\
 	sam4l.c	\
@@ -87,8 +88,12 @@ blackmagic: include/version.h $(OBJ)
 
 clean:	host_clean
 	$(Q)echo "  CLEAN"
-	-$(Q)$(RM) -f *.o *.d *~ blackmagic $(HOSTFILES)
-	-$(Q)$(RM) -f platforms/*/*.o platforms/*/*.d mapfile include/version.h
+ifeq ($(OS), Windows_NT)
+	-$(Q)$(shell del *.o, *.d, blackmagic*, $(HOSTFILES))
+else
+	-$(Q)$(RM) *.o *.d *~ blackmagic $(HOSTFILES)
+	-$(Q)$(RM) platforms/*/*.o platforms/*/*.d mapfile include/version.h
+endif
 
 all_platforms:
 	$(Q)set -e ;\

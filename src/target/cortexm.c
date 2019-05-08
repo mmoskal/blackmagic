@@ -32,6 +32,7 @@
 #include "target_internal.h"
 #include "cortexm.h"
 #include "platform.h"
+#include "command.h"
 
 #include <unistd.h>
 
@@ -344,6 +345,7 @@ bool cortexm_probe(ADIv5_AP_t *ap, bool forced)
 	PROBE(kinetis_probe);
 	PROBE(efm32_probe);
 	PROBE(msp432_probe);
+	PROBE(ke04_probe);
 	PROBE(lpc17xx_probe);
 #undef PROBE
 
@@ -873,7 +875,7 @@ static bool cortexm_vector_catch(target *t, int argc, char *argv[])
 	uint32_t tmp = 0;
 	unsigned i;
 
-	if ((argc < 3) || ((argv[1][0] != 'e') && (argv[1][0] != 'd'))) {
+	if (argc < 3) {
 		tc_printf(t, "usage: monitor vector_catch (enable|disable) "
 			     "(hard|int|bus|stat|chk|nocp|mm|reset)\n");
 	} else {
@@ -883,12 +885,16 @@ static bool cortexm_vector_catch(target *t, int argc, char *argv[])
 					tmp |= 1 << i;
 			}
 
-		if (argv[1][0] == 'e')
-			priv->demcr |= tmp;
-		else
-			priv->demcr &= ~tmp;
+		bool enable;
+		if (parse_enable_or_disable(argv[1], &enable)) {
+			if (enable) {
+				priv->demcr |= tmp;
+			} else {
+				priv->demcr &= ~tmp;
+			}
 
-		target_mem_write32(t, CORTEXM_DEMCR, priv->demcr);
+			target_mem_write32(t, CORTEXM_DEMCR, priv->demcr);
+		}
 	}
 
 	tc_printf(t, "Catching vectors: ");
