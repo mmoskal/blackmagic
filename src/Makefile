@@ -10,12 +10,9 @@ MAKEFLAGS += --no-print-dir
 Q := @
 endif
 
-OPT_FLAGS ?= -O2
-
-CFLAGS += -Wall -Wextra -Werror -Wno-char-subscripts -Wno-cast-function-type \
-	$(OPT_FLAGS) -std=gnu99 -g3 -MD \
+CFLAGS += -Wall -Wextra -Werror -Wno-char-subscripts \
+	-std=gnu99 -g3 -MD \
 	-I. -Iinclude -Iplatforms/common -I$(PLATFORM_DIR)
-LDFLAGS += $(OPT_FLAGS)
 
 ifeq ($(ENABLE_DEBUG), 1)
 CFLAGS += -DENABLE_DEBUG
@@ -36,9 +33,7 @@ SRC =			\
 	gdb_hostio.c	\
 	gdb_packet.c	\
 	hex_utils.c	\
-	jtag_scan.c	\
-	jtagtap.c	\
-	jtagtap_generic.c	\
+	jtag_devs.c	\
 	lmi.c		\
 	lpc_common.c	\
 	lpc11xx.c	\
@@ -53,27 +48,49 @@ SRC =			\
 	nxpke04.c	\
 	platform.c	\
 	sam3x.c		\
-	sam4l.c	\
+	sam4l.c		\
 	samd.c		\
+	samx5x.c	\
 	stm32f1.c	\
 	stm32f4.c	\
 	stm32h7.c	\
 	stm32l0.c	\
 	stm32l4.c	\
-	swdptap.c	\
-	swdptap_generic.c	\
 	target.c	\
 
 include $(PLATFORM_DIR)/Makefile.inc
 
-OBJ = $(SRC:.c=.o)
+OPT_FLAGS ?= -O2
+CFLAGS += $(OPT_FLAGS)
+LDFLAGS += $(OPT_FLAGS)
 
-blackmagic: include/version.h $(OBJ)
+ifndef TARGET
+TARGET=blackmagic
+endif
+
+ifdef NO_OWN_LL
+SRC += jtagtap_generic.c swdptap_generic.c
+endif
+
+ifndef OWN_HL
+SRC += jtag_scan.c jtagtap.c swdptap.c
+SRC += remote.c
+else
+CFLAGS += -DOWN_HL
+endif
+
+OBJ = $(patsubst %.S,%.o,$(patsubst %.c,%.o,$(SRC)))
+
+$(TARGET): include/version.h $(OBJ)
 	@echo "  LD      $@"
 	$(Q)$(CC) -o $@ $(OBJ) $(LDFLAGS)
 
 %.o:	%.c
 	@echo "  CC      $<"
+	$(Q)$(CC) $(CFLAGS) -c $< -o $@
+
+%.o:	%.S
+	@echo "  AS      $<"
 	$(Q)$(CC) $(CFLAGS) -c $< -o $@
 
 %.bin:	%
@@ -88,12 +105,8 @@ blackmagic: include/version.h $(OBJ)
 
 clean:	host_clean
 	$(Q)echo "  CLEAN"
-ifeq ($(OS), Windows_NT)
-	-$(Q)$(shell del *.o, *.d, blackmagic*, $(HOSTFILES))
-else
 	-$(Q)$(RM) *.o *.d *~ blackmagic $(HOSTFILES)
 	-$(Q)$(RM) platforms/*/*.o platforms/*/*.d mapfile include/version.h
-endif
 
 all_platforms:
 	$(Q)set -e ;\
@@ -109,6 +122,11 @@ all_platforms:
 		if [ -f blackmagic.bin ]; then \
 			mv blackmagic.bin artifacts/blackmagic-$$PROBE_HOST.bin ;\
 			echo "<li><a href='blackmagic-$$PROBE_HOST.bin'>$$PROBE_HOST</a></li>"\
+				>> artifacts/index.html ;\
+		fi ;\
+		if [ -f blackmagic_dfu.bin ]; then \
+			mv blackmagic_dfu.bin artifacts/blackmagic_dfu-$$PROBE_HOST.bin ;\
+			echo "<li><a href='blackmagic_dfu-$$PROBE_HOST.bin'>$$PROBE_HOST DFU</a></li>"\
 				>> artifacts/index.html ;\
 		fi ;\
 	done ;\

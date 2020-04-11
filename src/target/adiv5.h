@@ -106,6 +106,18 @@
 #define ADIV5_AP_CSW_SIZE_WORD		(2u << 0)
 #define ADIV5_AP_CSW_SIZE_MASK		(7u << 0)
 
+/* AP Debug Base Address Register (BASE) */
+#define ADIV5_AP_BASE_BASEADDR		(0xFFFFF000u)
+#define ADIV5_AP_BASE_PRESENT		(1u << 0)
+
+
+/* ADIv5 Class 0x1 ROM Table Registers */
+#define ADIV5_ROM_MEMTYPE			0xFCC
+#define ADIV5_ROM_MEMTYPE_SYSMEM	(1u << 0)
+#define ADIV5_ROM_ROMENTRY_PRESENT  (1u << 0)
+#define ADIV5_ROM_ROMENTRY_OFFSET	(0xFFFFF000u)
+
+
 /* Constants to make RnW parameters more clear in code */
 #define ADIV5_LOW_WRITE		0
 #define ADIV5_LOW_READ		1
@@ -174,9 +186,7 @@ void adiv5_dp_init(ADIv5_DP_t *dp);
 void adiv5_dp_write(ADIv5_DP_t *dp, uint16_t addr, uint32_t value);
 
 ADIv5_AP_t *adiv5_new_ap(ADIv5_DP_t *dp, uint8_t apsel);
-void adiv5_dp_ref(ADIv5_DP_t *dp);
 void adiv5_ap_ref(ADIv5_AP_t *ap);
-void adiv5_dp_unref(ADIv5_DP_t *dp);
 void adiv5_ap_unref(ADIv5_AP_t *ap);
 
 void adiv5_ap_write(ADIv5_AP_t *ap, uint16_t addr, uint32_t value);
@@ -188,6 +198,5 @@ void adiv5_mem_read(ADIv5_AP_t *ap, void *dest, uint32_t src, size_t len);
 void adiv5_mem_write(ADIv5_AP_t *ap, uint32_t dest, const void *src, size_t len);
 void adiv5_mem_write_sized(ADIv5_AP_t *ap, uint32_t dest, const void *src,
 						   size_t len, enum align align);
-
+uint64_t adiv5_ap_read_pidr(ADIv5_AP_t *ap, uint32_t addr);
 #endif
-

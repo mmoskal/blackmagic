@@ -68,7 +68,6 @@ void usbuart_init(void)
 
 	/* Setup timer for running deferred FIFO processing */
 	USBUSART_TIM_CLK_EN();
-	timer_reset(USBUSART_TIM);
 	timer_set_mode(USBUSART_TIM, TIM_CR1_CKD_CK_INT,
 			TIM_CR1_CMS_EDGE, TIM_CR1_DIR_UP);
 	timer_set_prescaler(USBUSART_TIM,
@@ -217,7 +216,10 @@ void USBUSART_ISR(void)
 {
 	uint32_t err = USART_SR(USBUSART);
 	char c = usart_recv(USBUSART);
-	if (err & (USART_SR_ORE | USART_SR_FE | USART_SR_NE))
+#if !defined(USART_SR_NE) && defined(USART_ISR_NF)
+# define USART_SR_NE USART_ISR_NF
+#endif
+	if (err & (USART_FLAG_ORE | USART_FLAG_FE | USART_SR_NE))
 		return;
 
 	/* Turn on LED */
@@ -261,9 +263,13 @@ enum {
 int rdi_write(int fn, const char *buf, size_t len)
 {
 	(void)fn;
+#if defined(PLATFORM_HAS_DEBUG) && !defined(PC_HOSTED)
 	if (debug_bmp)
 		return len - usbuart_debug_write(buf, len);
-
+#else
+	(void)buf;
+	(void)len;
+#endif
 	return 0;
 }
 

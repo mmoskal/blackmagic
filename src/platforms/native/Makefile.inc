@@ -6,7 +6,7 @@ CFLAGS += -Istm32/include -mcpu=cortex-m3 -mthumb \
 	-DSTM32F1 -DBLACKMAGIC -I../libopencm3/include \
 	-Iplatforms/stm32
 
-LDFLAGS_BOOT := $(LDFLAGS) -lopencm3_stm32f1 -Wl,--defsym,_stack=0x20005000 \
+LDFLAGS_BOOT := $(LDFLAGS) --specs=nano.specs -lopencm3_stm32f1 \
 	-Wl,-T,platforms/stm32/blackmagic.ld -nostartfiles -lc \
 	-Wl,-Map=mapfile -mthumb -mcpu=cortex-m3 -Wl,-gc-sections \
 	-L../libopencm3/lib
@@ -34,8 +34,4 @@ blackmagic_dfu: usbdfu.o dfucore.o dfu_f1.o
 	$(Q)$(CC) $^ -o $@ $(LDFLAGS_BOOT)
 
 host_clean:
-ifeq ($(OS), Windows_NT)
-	-$(Q)$(shell del blackmagic.bin blackmagic_dfu blackmagic_dfu.bin blackmagic_dfu.hex)
-else
 	-$(Q)$(RM) blackmagic.bin blackmagic_dfu blackmagic_dfu.bin blackmagic_dfu.hex
-endif

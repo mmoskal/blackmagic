@@ -28,6 +28,8 @@
 
 struct ftdi_context *ftdic;
 
+#include "cl_utils.h"
+
 #define BUF_SIZE 4096
 static uint8_t outbuf[BUF_SIZE];
 static uint16_t bufptr = 0;
@@ -180,29 +182,21 @@ cable_desc_t cable_desc[] = {
 
 void platform_init(int argc, char **argv)
 {
-	int err;
-	int c;
-	unsigned index = 0;
-	char *serial = NULL;
-	char * cablename =  "ftdi";
-	while((c = getopt(argc, argv, "c:s:")) != -1) {
-		switch(c) {
-		case 'c':
-			cablename =  optarg;
-			break;
-		case 's':
-			serial = optarg;
-			break;
-		}
-	}
+	BMP_CL_OPTIONS_t cl_opts = {0};
+	cl_opts.opt_idstring = "Blackmagic Debug Probe for FTDI/MPSSE";
+	cl_opts.opt_cable = "ftdi";
+	cl_init(&cl_opts, argc, argv);
 
+	int err;
+	unsigned index = 0;
+	int ret = -1;
 	for(index = 0; index < sizeof(cable_desc)/sizeof(cable_desc[0]);
 		index++)
-		 if (strcmp(cable_desc[index].name, cablename) == 0)
+		 if (strcmp(cable_desc[index].name, cl_opts.opt_cable) == 0)
 		 break;
 
 	if (index == sizeof(cable_desc)/sizeof(cable_desc[0])){
-		fprintf(stderr, "No cable matching %s found\n",cablename);
+		fprintf(stderr, "No cable matching %s found\n", cl_opts.opt_cable);
 		exit(-1);
 	}
 
@@ -226,32 +220,42 @@ void platform_init(int argc, char **argv)
 	if((err = ftdi_set_interface(ftdic, active_cable->interface)) != 0) {
 		fprintf(stderr, "ftdi_set_interface: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
-		abort();
+		goto error_1;
 	}
 	if((err = ftdi_usb_open_desc(
 		ftdic, active_cable->vendor, active_cable->product,
-		active_cable->description, serial)) != 0) {
+		active_cable->description, cl_opts.opt_serial)) != 0) {
 		fprintf(stderr, "unable to open ftdi device: %d (%s)\n",
 			err, ftdi_get_error_string(ftdic));
-		abort();
+		goto error_1;
 	}
 
 	if((err = ftdi_set_latency_timer(ftdic, 1)) != 0) {
 		fprintf(stderr, "ftdi_set_latency_timer: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
-		abort();
+		goto error_2;
 	}
 	if((err = ftdi_set_baudrate(ftdic, 1000000)) != 0) {
 		fprintf(stderr, "ftdi_set_baudrate: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
-		abort();
+		goto error_2;
 	}
 	if((err = ftdi_write_data_set_chunksize(ftdic, BUF_SIZE)) != 0) {
 		fprintf(stderr, "ftdi_write_data_set_chunksize: %d: %s\n",
 			err, ftdi_get_error_string(ftdic));
-		abort();
+		goto error_2;
 	}
-	assert(gdb_if_init() == 0);
+	if (cl_opts.opt_mode != BMP_MODE_DEBUG) {
+		ret = cl_execute(&cl_opts);
+	} else {
+		assert(gdb_if_init() == 0);
+		return;
+	}
+  error_2:
+	ftdi_usb_close(ftdic);
+  error_1:
+	ftdi_free(ftdic);
+	exit(ret);
 }
 
 void platform_srst_set_val(bool assert)
@@ -286,34 +290,7 @@ int platform_buffer_read(uint8_t *data, int size)
 	return size;
 }
 
-#if defined(_WIN32) && !defined(__MINGW32__)
-#warning "This vasprintf() is dubious!"
-int vasprintf(char **strp, const char *fmt, va_list ap)
-{
-	int size = 128, ret = 0;
-
-	*strp = malloc(size);
-	while(*strp && ((ret = vsnprintf(*strp, size, fmt, ap)) == size))
-		*strp = realloc(*strp, size <<= 1);
-
-	return ret;
-}
-#endif
-
 const char *platform_target_voltage(void)
 {
 	return "not supported";
 }
-
-void platform_delay(uint32_t ms)
-{
-	usleep(ms * 1000);
-}
-
-uint32_t platform_time_ms(void)
-{
-	struct timeval tv;
-	gettimeofday(&tv, NULL);
-	return (tv.tv_sec * 1000) + (tv.tv_usec / 1000);
-}
-

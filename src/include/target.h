@@ -29,7 +29,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <sys/types.h>
-#include <unistd.h>
 
 typedef struct target_s target;
 typedef uint32_t target_addr;
@@ -47,6 +46,7 @@ target *target_attach_n(int n, struct target_controller *);
 void target_detach(target *t);
 bool target_attached(target *t);
 const char *target_driver_name(target *t);
+const char *target_core_name(target *t);
 
 /* Memory access functions */
 bool target_mem_map(target *t, char *buf, size_t len);
@@ -62,6 +62,8 @@ size_t target_regs_size(target *t);
 const char *target_tdesc(target *t);
 void target_regs_read(target *t, void *data);
 void target_regs_write(target *t, const void *data);
+ssize_t target_reg_read(target *t, int reg, void *data, size_t max);
+ssize_t target_reg_write(target *t, int reg, const void *data, size_t size);
 
 /* Halt/resume functions */
 enum target_halt_reason {

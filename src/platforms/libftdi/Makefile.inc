@@ -1,10 +1,12 @@
 SYS = $(shell $(CC) -dumpmachine)
-CFLAGS += -DLIBFTDI
-LDFLAGS += -lftdi1
+CFLAGS += -DPC_HOSTED -DNO_LIBOPENCM3 -DENABLE_DEBUG
+CFLAGS += $(shell pkg-config --cflags libftdi1)
+LDFLAGS += $(shell pkg-config --libs libftdi1)
 ifneq (, $(findstring mingw, $(SYS)))
 LDFLAGS +=  -lusb-1.0 -lws2_32
-CFLAGS += -Wno-cast-function-type
 else ifneq (, $(findstring cygwin, $(SYS)))
 LDFLAGS +=  -lusb-1.0 -lws2_32
 endif
-SRC += 	timing.c	\
+VPATH += platforms/pc
+SRC += 	timing.c cl_utils.c utils.c
+CFLAGS +=-I ./target -I./platforms/pc

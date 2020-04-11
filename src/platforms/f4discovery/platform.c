@@ -38,11 +38,11 @@
 #include <libopencm3/cm3/cortex.h>
 
 jmp_buf fatal_error_jmpbuf;
-extern uint32_t _ebss;
+extern char _ebss[];
 
 void platform_init(void)
 {
-	volatile uint32_t *magic = (uint32_t *) &_ebss;
+	volatile uint32_t *magic = (uint32_t *)_ebss;
 	/* Check the USER button*/
 	rcc_periph_clock_enable(RCC_GPIOA);
 	if (gpio_get(GPIOA, GPIO0) ||
@@ -62,7 +62,7 @@ void platform_init(void)
 		scb_reset_core();
 	}
 
-	rcc_clock_setup_hse_3v3(&rcc_hse_8mhz_3v3[RCC_CLOCK_3V3_48MHZ]);
+	rcc_clock_setup_pll(&rcc_hse_8mhz_3v3[RCC_CLOCK_3V3_168MHZ]);
 
 	/* Enable peripherals */
 	rcc_periph_clock_enable(RCC_OTGFS);

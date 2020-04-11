@@ -37,7 +37,7 @@
 #include "target_internal.h"
 #include "cortexm.h"
 
-static bool stm32f4_cmd_erase_mass(target *t);
+static bool stm32f4_cmd_erase_mass(target *t, int argc, const char **argv);
 static bool stm32f4_cmd_option(target *t, int argc, char *argv[]);
 static bool stm32f4_cmd_psize(target *t, int argc, char *argv[]);
 
@@ -136,7 +136,13 @@ static void stm32f4_add_flash(target *t,
 {
 	if (length == 0) return;
 	struct stm32f4_flash *sf = calloc(1, sizeof(*sf));
-	struct target_flash *f = &sf->f;
+	struct target_flash *f;
+	if (!sf) {			/* calloc failed: heap exhaustion */
+		DEBUG("calloc: failed in %s\n", __func__);
+		return;
+	}
+
+	f = &sf->f;
 	f->start = addr;
 	f->length = length;
 	f->blocksize = blocksize;
@@ -405,7 +411,10 @@ static int stm32f4_flash_erase(struct target_flash *f, target_addr addr,
 				DEBUG("stm32f4 flash erase: comm error\n");
 				return -1;
 			}
-		len -= f->blocksize;
+		if (len > f->blocksize)
+			len -= f->blocksize;
+		else
+			len = 0;
 		sector++;
 		if ((sf->bank_split) && (sector == sf->bank_split))
 			sector = 16;
@@ -450,8 +459,10 @@ static int stm32f4_flash_write(struct target_flash *f,
 	return 0;
 }
 
-static bool stm32f4_cmd_erase_mass(target *t)
+static bool stm32f4_cmd_erase_mass(target *t, int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
 	const char spinner[] = "|/-\\";
 	int spinindex = 0;
 	struct target_flash *f = t->flash;
@@ -507,7 +518,7 @@ static bool stm32f4_cmd_erase_mass(target *t)
  * * Documentation for F413 with OPTCR default = 0ffffffed seems wrong!
  */
 
-bool optcr_mask(target *t, uint32_t *val)
+static bool optcr_mask(target *t, uint32_t *val)
 {
 	switch (t->idcode) {
 	case ID_STM32F20X:

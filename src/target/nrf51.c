@@ -30,14 +30,14 @@ static int nrf51_flash_erase(struct target_flash *f, target_addr addr, size_t le
 static int nrf51_flash_write(struct target_flash *f,
                              target_addr dest, const void *src, size_t len);
 
-static bool nrf51_cmd_erase_all(target *t);
-static bool nrf51_cmd_read_hwid(target *t);
-static bool nrf51_cmd_read_fwid(target *t);
-static bool nrf51_cmd_read_deviceid(target *t);
-static bool nrf51_cmd_read_deviceaddr(target *t);
-static bool nrf51_cmd_read_deviceinfo(target *t);
-static bool nrf51_cmd_read_help(target *t);
-static bool nrf51_cmd_read(target *t, int argc, const char *argv[]);
+static bool nrf51_cmd_erase_all(target *t, int argc, const char **argv);
+static bool nrf51_cmd_read_hwid(target *t, int argc, const char **argv);
+static bool nrf51_cmd_read_fwid(target *t, int argc, const char **argv);
+static bool nrf51_cmd_read_deviceid(target *t, int argc, const char **argv);
+static bool nrf51_cmd_read_deviceaddr(target *t, int argc, const char **argv);
+static bool nrf51_cmd_read_deviceinfo(target *t, int argc, const char **argv);
+static bool nrf51_cmd_read_help(target *t, int argc, const char **argv);
+static bool nrf51_cmd_read(target *t, int argc, const char **argv);
 
 const struct command_s nrf51_cmd_list[] = {
 	{"erase_mass", (cmd_handler)nrf51_cmd_erase_all, "Erase entire flash memory"},
@@ -98,6 +98,11 @@ static void nrf51_add_flash(target *t,
                             uint32_t addr, size_t length, size_t erasesize)
 {
 	struct target_flash *f = calloc(1, sizeof(*f));
+	if (!f) {			/* calloc failed: heap exhaustion */
+		DEBUG("calloc: failed in %s\n", __func__);
+		return;
+	}
+
 	f->start = addr;
 	f->length = length;
 	f->blocksize = erasesize;
@@ -175,7 +180,10 @@ static int nrf51_flash_erase(struct target_flash *f, target_addr addr, size_t le
 				return -1;
 
 		addr += f->blocksize;
-		len -= f->blocksize;
+		if (len > f->blocksize)
+			len -= f->blocksize;
+		else
+			len = 0;
 	}
 
 	/* Return to read-only */
@@ -210,8 +218,10 @@ static int nrf51_flash_write(struct target_flash *f,
 	return 0;
 }
 
-static bool nrf51_cmd_erase_all(target *t)
+static bool nrf51_cmd_erase_all(target *t, int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
 	tc_printf(t, "erase..\n");
 
 	/* Enable erase */
@@ -233,22 +243,28 @@ static bool nrf51_cmd_erase_all(target *t)
 	return true;
 }
 
-static bool nrf51_cmd_read_hwid(target *t)
+static bool nrf51_cmd_read_hwid(target *t, int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
 	uint32_t hwid = target_mem_read32(t, NRF51_FICR_CONFIGID) & 0xFFFF;
 	tc_printf(t, "Hardware ID: 0x%04X\n", hwid);
 
 	return true;
 }
-static bool nrf51_cmd_read_fwid(target *t)
+static bool nrf51_cmd_read_fwid(target *t, int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
 	uint32_t fwid = (target_mem_read32(t, NRF51_FICR_CONFIGID) >> 16) & 0xFFFF;
 	tc_printf(t, "Firmware ID: 0x%04X\n", fwid);
 
 	return true;
 }
-static bool nrf51_cmd_read_deviceid(target *t)
+static bool nrf51_cmd_read_deviceid(target *t, int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
 	uint32_t deviceid_low = target_mem_read32(t, NRF51_FICR_DEVICEID_LOW);
 	uint32_t deviceid_high = target_mem_read32(t, NRF51_FICR_DEVICEID_HIGH);
 
@@ -257,8 +273,10 @@ static bool nrf51_cmd_read_deviceid(target *t)
 	return true;
 }
 
-static bool nrf51_cmd_read_deviceinfo(target *t)
+static bool nrf51_cmd_read_deviceinfo(target *t, int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
 	struct deviceinfo{
 		uint32_t part;
 		union{
@@ -306,8 +324,10 @@ static bool nrf51_cmd_read_deviceinfo(target *t)
 	return true;
 }
 
-static bool nrf51_cmd_read_deviceaddr(target *t)
+static bool nrf51_cmd_read_deviceaddr(target *t, int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
 	uint32_t addr_type = target_mem_read32(t, NRF51_FICR_DEVICEADDRTYPE);
 	uint32_t addr_low = target_mem_read32(t, NRF51_FICR_DEVICEADDR_LOW);
 	uint32_t addr_high = target_mem_read32(t, NRF51_FICR_DEVICEADDR_HIGH) & 0xFFFF;
@@ -320,8 +340,10 @@ static bool nrf51_cmd_read_deviceaddr(target *t)
 
 	return true;
 }
-static bool nrf51_cmd_read_help(target *t)
+static bool nrf51_cmd_read_help(target *t, int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
 	const struct command_s *c;
 
 	tc_printf(t, "Read commands:\n");
@@ -330,7 +352,7 @@ static bool nrf51_cmd_read_help(target *t)
 
 	return true;
 }
-static bool nrf51_cmd_read(target *t, int argc, const char *argv[])
+static bool nrf51_cmd_read(target *t, int argc, const char **argv)
 {
 	const struct command_s *c;
 	if (argc > 1) {
@@ -342,23 +364,18 @@ static bool nrf51_cmd_read(target *t, int argc, const char *argv[])
 				return !c->handler(t, argc - 1, &argv[1]);
 		}
 	}
-	return nrf51_cmd_read_help(t);
+	return nrf51_cmd_read_help(t, 0, NULL);
 }
 
 #include "adiv5.h"
 #define NRF52_MDM_IDR 0x02880000
 
-static bool nrf51_mdm_cmd_erase_mass(target *t);
+static bool nrf51_mdm_cmd_erase_mass(target *t, int argc, const char **argv);
 
 const struct command_s nrf51_mdm_cmd_list[] = {
 	{"erase_mass", (cmd_handler)nrf51_mdm_cmd_erase_mass, "Erase entire flash memory"},
 	{NULL, NULL, NULL}
 };
-
-static bool nop_function(void)
-{
-	return true;
-}
 
 void nrf51_mdm_probe(ADIv5_AP_t *ap)
 {
@@ -370,24 +387,16 @@ void nrf51_mdm_probe(ADIv5_AP_t *ap)
 	}
 
 	target *t = target_new();
+	if (!t) {
+		return;
+	}
+
 	adiv5_ap_ref(ap);
 	t->priv = ap;
 	t->priv_free = (void*)adiv5_ap_unref;
 
 	t->driver = "Nordic nRF52 Access Port";
-	t->attach = (void*)nop_function;
-	t->detach = (void*)nop_function;
-	t->check_error = (void*)nop_function;
-	t->mem_read = (void*)nop_function;
-	t->mem_write = (void*)nop_function;
 	t->regs_size = 4;
-	t->regs_read = (void*)nop_function;
-	t->regs_write = (void*)nop_function;
-	t->reset = (void*)nop_function;
-	t->halt_request = (void*)nop_function;
-	//t->halt_poll = mdm_halt_poll;
-	t->halt_resume = (void*)nop_function;
-
 	target_add_commands(t, nrf51_mdm_cmd_list, t->driver);
 }
 
@@ -398,8 +407,10 @@ void nrf51_mdm_probe(ADIv5_AP_t *ap)
 #define MDM_PROT_EN  ADIV5_AP_REG(0x0C)
 
 
-static bool nrf51_mdm_cmd_erase_mass(target *t)
+static bool nrf51_mdm_cmd_erase_mass(target *t, int argc, const char **argv)
 {
+	(void)argc;
+	(void)argv;
 	ADIv5_AP_t *ap = t->priv;
 
 	uint32_t status = adiv5_ap_read(ap, MDM_STATUS);
