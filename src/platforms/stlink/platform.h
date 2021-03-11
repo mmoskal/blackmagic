@@ -47,7 +47,11 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define TCK_PORT	GPIOA
 #define TDO_PORT	GPIOA
 #define TDI_PIN		GPIO7
+#ifdef BLUEPILL
+#define TMS_PIN		GPIO0
+#else
 #define TMS_PIN		GPIO14
+#endif
 #define TCK_PIN		GPIO5
 #define TDO_PIN		GPIO6
 
@@ -60,7 +64,11 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define SRST_PIN_V1	GPIO1
 #define SRST_PIN_V2	GPIO0
 
+#ifdef BLUEPILL
+#define LED_PORT	GPIOC
+#else
 #define LED_PORT	GPIOA
+#endif
 /* Use PC14 for a "dummy" uart led. So we can observere at least with scope*/
 #define LED_PORT_UART	GPIOC
 #define LED_UART	GPIO14
@@ -69,8 +77,13 @@ int usbuart_debug_write(const char *buf, size_t len);
 #define NUM_TRACE_PACKETS		(128)		/* This is an 8K buffer */
 #define TRACESWO_PROTOCOL		2			/* 1 = Manchester, 2 = NRZ / async */
 
+#ifdef BLUEPILL
+# define SWD_CR   GPIO_CRL(SWDIO_PORT)
+# define SWD_CR_MULT (1 << (0 << 2))
+#else
 # define SWD_CR   GPIO_CRH(SWDIO_PORT)
 # define SWD_CR_MULT (1 << ((14 - 8) << 2))
+#endif
 
 #define TMS_SET_MODE() \
 	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_2_MHZ, \

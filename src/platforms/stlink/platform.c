@@ -53,6 +53,15 @@ void platform_init(void)
 	initialise_monitor_handles();
 #endif
 	rcc_clock_setup_pll(&rcc_hse_configs[RCC_CLOCK_HSE8_72MHZ]);
+#ifdef BLUEPILL
+	/* On bluepill, the rev detection is not relevant.
+	 * It also sets some pin modes, so we still call it, but override the results.
+	 * The LED is on PC13 and we use B1 as SRST.
+	 */
+	rev = 0;
+	led_idle_run = GPIO13;
+	srst_pin = SRST_PIN_V1;
+#else
 	if (rev == 0) {
 		led_idle_run = GPIO8;
 		srst_pin = SRST_PIN_V1;
@@ -60,6 +69,7 @@ void platform_init(void)
 		led_idle_run = GPIO9;
 		srst_pin = SRST_PIN_V2;
 	}
+#endif
 	/* Setup GPIO ports */
 	gpio_set_mode(TMS_PORT, GPIO_MODE_OUTPUT_2_MHZ,
 	              GPIO_CNF_INPUT_FLOAT, TMS_PIN);
@@ -84,7 +94,14 @@ void platform_init(void)
 	/* Don't enable UART if we're being debugged. */
 	if (!(SCS_DEMCR & SCS_DEMCR_TRCENA))
 		usbuart_init();
-        adc_init();
+    adc_init();
+
+#ifdef BLUEPILL
+	/* This allows the reset button on the bluepill to reset both the probe and the target. */
+	platform_srst_set_val(true);
+	platform_delay(10);
+	platform_srst_set_val(false);
+#endif
 }
 
 void platform_srst_set_val(bool assert)
@@ -148,6 +165,9 @@ const char *platform_target_voltage(void)
 
 	/* Value in mV*/
 	uint32_t val = (platform_adc_value * 2400) / vrefint_value;
+#ifdef BLUEPILL
+	val >>= 1; /* no voltage divider */
+#endif
 	ret[0] = '0' +	val / 1000;
 	ret[2] = '0' + (val /  100) % 10;
 	ret[3] = '0' + (val /	10) % 10;

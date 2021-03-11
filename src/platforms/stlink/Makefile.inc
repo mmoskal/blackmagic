@@ -19,6 +19,10 @@ else
 LDFLAGS = $(LDFLAGS_BOOT) -Wl,-Ttext=0x8002000
 endif
 
+ifeq ($(BLUEPILL), 1)
+CFLAGS += -DBLUEPILL
+endif
+
 ifeq ($(ENABLE_DEBUG), 1)
 LDFLAGS += --specs=rdimon.specs
 else
